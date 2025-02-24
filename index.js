@@ -35,10 +35,38 @@ async function run() {
 
 
         app.get('/postdata', async (req, res) => {
-            const cursor = postDatabase.find();
-            const result = await cursor.toArray();
+            const { start, end, search } = req.query;
+
+            let query = {};
+
+            // Apply search filter
+            if (search) {
+                query.$or = [
+                    { platform: { $regex: search, $options: 'i' } },
+                    { title: { $regex: search, $options: 'i' } },
+                    { activist: { $regex: search, $options: 'i' } },
+                    { tag: { $regex: search, $options: 'i' } }
+                ];
+            }
+
+            // Apply date range filter
+            if (start && end) {
+                query.date = {
+                    $gte: start,
+                    $lte: end
+                };
+            }
+
+            const result = await postDatabase.find(query).toArray();
             res.send(result);
-        })
+        });
+
+        // Insert new post
+        app.post('/postdata', async (req, res) => {
+            const newPostData = req.body;
+            const result = await postDatabase.insertOne(newPostData);
+            res.send(result);
+        });
 
         app.post('/postdata', async (req, res) => {
             const newPostData = req.body;
